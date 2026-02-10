@@ -1,15 +1,15 @@
 package com.example.fuelpricecalculator
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
@@ -20,11 +20,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.fuelpricecalculator.ui.theme.FuelPriceCalculatorTheme
 
+class TripApplication : Application(){
+    val database by lazy { TripDatabase.getDatabase(this) }
+    val repository by lazy { TripRepository(database.tripDao()) }
+}
+
 class MainActivity : ComponentActivity() {
+    private val viewModel: TripViewModel by viewModels {
+        val repository = (application as TripApplication).repository
+        TripViewModelFactory(repository)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -64,12 +72,9 @@ fun FuelPriceCalculatorApp() {
 }
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>) {
     // This is your core UI: Car Card, Buttons, and Trip List
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+    Column(modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Zone 1: Current Vehicle Card
@@ -119,7 +124,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            items(dummyTrips) { tripName ->
+            items(trips) { tripName ->
                 TripItem(destination = tripName, cost = "£${(15..45).random()}.20")
             }
         }
