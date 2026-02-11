@@ -5,20 +5,21 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Trip::class], version = 1, exportSchema = true)
-abstract class TripDatabase : RoomDatabase() {
+@Database(entities = [Trip::class, Car::class], version = 1, exportSchema = true)
+abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
+    abstract fun carDao(): CarDao
 
     companion object {
         @Volatile
-        private var INSTANCE: TripDatabase? = null
+        private var INSTANCE: AppDatabase? = null
 
-        fun getDatabase(context: Context): TripDatabase {
+        fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder<TripDatabase>(
+                val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    TripDatabase::class.java,
-                    "trip_database"
+                    AppDatabase::class.java,
+                    "fuel_calculator_database"
 
                 ).build()
                 INSTANCE = instance
