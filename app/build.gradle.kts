@@ -40,6 +40,7 @@ android {
 
 dependencies {
     implementation("androidx.room:room-runtime:2.8.4")
+    implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
     implementation("com.google.android.material:material:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
@@ -56,8 +57,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     implementation(libs.firebase.inappmessaging)
-    implementation(libs.androidx.room.common.jvm)
-    implementation(libs.androidx.room.runtime.jvm)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

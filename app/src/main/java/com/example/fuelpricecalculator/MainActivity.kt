@@ -16,38 +16,43 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fuelpricecalculator.ui.theme.FuelPriceCalculatorTheme
+import kotlin.collections.emptyList
 
 class TripApplication : Application(){
-    val database by lazy { TripDatabase.getDatabase(this) }
-    val repository by lazy { TripRepository(database.tripDao()) }
+    val database by lazy { AppDatabase.getDatabase(this) }
+    val repository by lazy { FuelRepository(database.tripDao(), database.carDao()) }
 }
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: TripViewModel by viewModels {
+    private val viewModel: FuelViewModel by viewModels {
         val repository = (application as TripApplication).repository
-        TripViewModelFactory(repository)
+        FuelViewModelFactory(repository)
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         setContent {
             FuelPriceCalculatorTheme {
-                FuelPriceCalculatorApp()
+                FuelPriceCalculatorApp(viewModel)
             }
         }
     }
 }
 
 @Composable
-fun FuelPriceCalculatorApp() {
+fun FuelPriceCalculatorApp(fuelViewModel: FuelViewModel) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
-
+    val trips by fuelViewModel.allTrips.observeAsState(initial = emptyList())
+    val cars by fuelViewModel.allCars.observeAsState(emptyList())
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             AppDestinations.entries.forEach {
@@ -61,9 +66,8 @@ fun FuelPriceCalculatorApp() {
         }
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            // FIX: We check which destination is selected and call the correct Composable
             when (currentDestination) {
-                AppDestinations.HOME -> HomeScreen(modifier = Modifier.padding(innerPadding))
+                AppDestinations.HOME -> HomeScreen(modifier = Modifier.padding(innerPadding), trips = trips, currentCar = cars.firstOrNull())
                 AppDestinations.FAVORITES -> Text("Saved Trips", Modifier.padding(innerPadding))
                 AppDestinations.PROFILE -> Text("Car Settings", Modifier.padding(innerPadding))
             }
@@ -72,7 +76,7 @@ fun FuelPriceCalculatorApp() {
 }
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>) {
+fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car?) {
     // This is your core UI: Car Card, Buttons, and Trip List
     Column(modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -86,11 +90,11 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = "Current Vehicle", style = MaterialTheme.typography.labelMedium)
                 Text(
-                    text = "AA11 ABC", // This will eventually come from your DVLA logic
+                    text = currentCar?.license ?: "No Car Added",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text(text = "Volkswagen Golf - 2.0 TDI", style = MaterialTheme.typography.bodyLarge)
+                Text(text = currentCar?.let { "${it.make ?: ""} ${it.model ?: ""}"} ?: "No car details available", style = MaterialTheme.typography.bodyLarge)
             }
         }
 
@@ -103,7 +107,7 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>) {
         }
 
         Button(
-            onClick = { /* TODO: Implement SharedPreferences logic to change car */ },
+            onClick = { /* TODO: Implement logic to change car */ },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text("Change Car")
@@ -117,15 +121,14 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>) {
         )
 
         // Zone 3: The List (Requirement #4: RecyclerView equivalent)
-        val dummyTrips = listOf("London to Exeter", "Manchester to Leeds", "Birmingham to Bristol")
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            items(trips) { tripName ->
-                TripItem(destination = tripName, cost = "£${(15..45).random()}.20")
+            items(trips) { trip ->
+                TripItem(trip = trip)
             }
         }
     }
@@ -141,14 +144,21 @@ enum class AppDestinations(
 }
 
 @Composable
-fun TripItem(destination: String, cost: String) {
+fun TripItem(trip: Trip) { // Changed parameters to take a Trip object
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = destination, fontWeight = FontWeight.Medium)
-            Text(text = "£14.50", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Column {
+                Text(text = trip.destination, fontWeight = FontWeight.Medium)
+                Text(text = "${trip.distance} miles", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                text = "£${String.format("%.2f", trip.cost)}",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

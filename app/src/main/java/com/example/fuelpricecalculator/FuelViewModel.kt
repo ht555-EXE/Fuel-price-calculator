@@ -8,9 +8,9 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
     val allCars: LiveData<List<Car>> = repository.allCars.asLiveData()
     val allTrips: LiveData<List<Trip>> = repository.allTrips.asLiveData()
 
-    private val _selectedCarLicense = MutableLiveData<String?>()
+    private val selectedCarLicense = MutableLiveData<String?>()
 
-    val tripsForSelectedCar: LiveData<List<Trip>> = _selectedCarLicense.switchMap { license ->
+    val tripsForSelectedCar: LiveData<List<Trip>> = selectedCarLicense.switchMap { license ->
         if (license == null) {
             MutableLiveData(emptyList())
         } else {
@@ -19,7 +19,7 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
     }
 
     fun selectCar(license: String) {
-        _selectedCarLicense.value = license
+        selectedCarLicense.value = license
     }
 
     fun insertCar(car: Car) = viewModelScope.launch {
@@ -34,7 +34,21 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
         repository.updateTrip(trip)
     }
 
+    fun updateCar(car: Car) = viewModelScope.launch {
+        repository.updateCar(car)
+    }
+
     fun clearAllTrips() = viewModelScope.launch {
         repository.clearAllTrips()
+    }
+}
+
+class FuelViewModelFactory(private val repository: FuelRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(FuelViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return FuelViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

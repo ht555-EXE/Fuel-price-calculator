@@ -22,7 +22,7 @@ data class Trip(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val carLicense: String,
     val destination: String,
-    val distance: String,
+    val distance: Double,
     val cost: Double,
     val date: Long
 )
