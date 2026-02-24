@@ -1,6 +1,7 @@
 package com.example.fuelpricecalculator
 
 import android.app.Application
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,15 +21,25 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fuelpricecalculator.ui.theme.FuelPriceCalculatorTheme
 import kotlin.collections.emptyList
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
 
 class TripApplication : Application(){
     val database by lazy { AppDatabase.getDatabase(this) }
-    val repository by lazy { FuelRepository(database.tripDao(), database.carDao()) }
+    private val retrofit by lazy {
+        retrofit2.Retrofit.Builder()
+            .baseUrl("https://driver-vehicle-licensing.api.gov.uk/")
+            .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
+            .build()
+    }
+    private val dvlaApiService by lazy {retrofit.create(DvlaApiService::class.java)}
+    val repository by lazy { FuelRepository(database.tripDao(),
+                                            database.carDao(), dvlaApiService) }
 }
 
 class MainActivity : ComponentActivity() {
@@ -77,8 +88,10 @@ fun FuelPriceCalculatorApp(fuelViewModel: FuelViewModel) {
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car?) {
+    val context = LocalContext.current
     // This is your core UI: Car Card, Buttons, and Trip List
-    Column(modifier = modifier.fillMaxSize().padding(16.dp),
+    Column(
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Zone 1: Current Vehicle Card
@@ -94,7 +107,8 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text(text = currentCar?.let { "${it.make ?: ""} ${it.model ?: ""}"} ?: "No car details available", style = MaterialTheme.typography.bodyLarge)
+                Text(text = currentCar?.let { "${it.make ?: ""} ${it.colour} \u00B7 ${it.fuelType}" }
+                    ?: "No car details available", style = MaterialTheme.typography.bodyLarge)
             }
         }
 
@@ -107,7 +121,10 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
         }
 
         Button(
-            onClick = { /* TODO: Implement logic to change car */ },
+            onClick = {
+                val intent = Intent(context, ChangeCarActivity::class.java)
+                context.startActivity(intent)
+            },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text("Change Car")
@@ -121,14 +138,25 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
         )
 
         // Zone 3: The List (Requirement #4: RecyclerView equivalent)
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
-            items(trips) { trip ->
-                TripItem(trip = trip)
+        if (trips.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No Trips Recorded",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(trips) { trip ->
+                    TripItem(trip = trip)
+                }
             }
         }
     }
@@ -144,7 +172,7 @@ enum class AppDestinations(
 }
 
 @Composable
-fun TripItem(trip: Trip) { // Changed parameters to take a Trip object
+fun TripItem(trip: Trip) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),

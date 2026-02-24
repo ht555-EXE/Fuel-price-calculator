@@ -1,6 +1,7 @@
 package com.example.fuelpricecalculator
 
 import androidx.lifecycle.*
+import com.google.firebase.BuildConfig
 import kotlinx.coroutines.launch
 
 class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
@@ -18,8 +19,22 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
         }
     }
 
+    fun addNewCar(license: String){
+        viewModelScope.launch {
+            val apiKey = "wIUdNp8fhYZfbcWT4YdU5rsCvIpJBtx7SHrbvhq1"
+            val result = repository.fetchAndSaveVehicle(license, apiKey)
+            if(result.isSuccess) {
+                println("Car added")
+            } else{
+                println("Error: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
     fun selectCar(license: String) {
-        selectedCarLicense.value = license
+        viewModelScope.launch {
+            repository.updateSelectedCar(license)
+        }
     }
 
     fun insertCar(car: Car) = viewModelScope.launch {

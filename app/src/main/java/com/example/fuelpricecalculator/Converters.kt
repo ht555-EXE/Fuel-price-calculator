@@ -12,12 +12,12 @@ class Converters {
     @TypeConverter
     fun toFuelType(value: String?): FuelType {
         if (value.isNullOrBlank()) {
-            return FuelType.PETROL
+            return FuelType.UNKNOWN
         }
         return try {
             FuelType.valueOf(value)
-        } catch (e: IllegalArgumentException) {
-            FuelType.PETROL
+        } catch (_: IllegalArgumentException) {
+            FuelType.UNKNOWN
         }
     }
 }

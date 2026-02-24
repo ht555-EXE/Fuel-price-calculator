@@ -7,7 +7,9 @@ import androidx.room.PrimaryKey
 data class Car (
     @PrimaryKey
     val license: String,
-    val model: String?,
+    val colour: String,
     val make: String?,
-    val fuelType: FuelType
+    val fuelType: FuelType,
+    val lastSelected: Long = System.currentTimeMillis(),
+    val efficiency: Double?
 )
