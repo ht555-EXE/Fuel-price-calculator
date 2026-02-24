@@ -35,6 +35,10 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    defaultConfig{
+        buildConfigField("String", "DVLA_KEY", "\"wIUdNp8fhYZfbcWT4YdU5rsCvIpJBtx7SHrbvhq1\"")
     }
 }
 
@@ -47,6 +51,8 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.8.2")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
     implementation("androidx.compose.runtime:runtime-livedata:1.6.1")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
