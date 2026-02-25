@@ -114,7 +114,10 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
 
         // Zone 2: Action Buttons
         Button(
-            onClick = { /* TODO: Implement Journey Planner Activity Intent */ },
+            onClick = {
+                val intent = Intent(context, AddJourneyActivity::class.java)
+                context.startActivity(intent)
+            },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text("Start New Journey")
