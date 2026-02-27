@@ -1,7 +1,7 @@
 package com.example.fuelpricecalculator
 
+import android.util.Log
 import androidx.lifecycle.*
-import com.google.firebase.BuildConfig
 import kotlinx.coroutines.launch
 
 class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
@@ -24,9 +24,29 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
             val apiKey = "wIUdNp8fhYZfbcWT4YdU5rsCvIpJBtx7SHrbvhq1"
             val result = repository.fetchAndSaveVehicle(license, apiKey)
             if(result.isSuccess) {
-                println("Car added")
+                Log.d("FuelViewModel", "Car added successfully: $license")
             } else{
-                println("Error: ${result.exceptionOrNull()?.message}")
+                Log.e("FuelViewModel", "Error adding car: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
+    val currentCarLicense: LiveData<String?> = repository.getCurrentCarLicense().asLiveData()
+    
+    fun addNewTrip(originPlaceId: String, destinationPlaceId: String, origin: String, destination: String){
+        val license = currentCarLicense.value
+        if (license == null) {
+            Log.e("FuelViewModel", "Cannot add trip: No car license selected!")
+            return
+        }
+
+        viewModelScope.launch {
+            val apiKey = "AIzaSyDOhBfgUByu7EzkbviohlK87YPOiGVYals"
+            val result = repository.calculateAndSaveTrip(license, apiKey, origin, destination, originPlaceId, destinationPlaceId)
+            if(result.isSuccess){
+                Log.d("FuelViewModel", "Trip added successfully for car: $license")
+            } else{
+                Log.e("FuelViewModel", "Error adding trip: ${result.exceptionOrNull()?.message}")
             }
         }
     }

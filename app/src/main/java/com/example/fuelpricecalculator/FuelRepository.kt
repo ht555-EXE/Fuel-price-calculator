@@ -1,8 +1,10 @@
 package com.example.fuelpricecalculator
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
-class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, private val dvlaApi: DvlaApiService) {
+
+class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, private val dvlaApi: DvlaApiService, private val googleApi: DistanceMatrixAPI) {
     val allCars: Flow<List<Car>> = carDao.getAllCars()
     val allTrips: Flow<List<Trip>> = tripDao.getAllTrips()
 
@@ -39,8 +41,42 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
             Result.failure(e)
         }
     }
+    suspend fun calculateAndSaveTrip(license: String, apiKey: String, origin: String, destination: String, originPlaceId: String, destinationPlaceId:String) : Result<Unit>{
+        return try {
+            val response = googleApi.getDistance(
+                origins = "place_id:$originPlaceId",
+                destinations = "place_id:$destinationPlaceId",
+                apiKey = apiKey
+            )
+            val element = response.rows.firstOrNull()?.elements?.firstOrNull()
+            if(element?.status == "OK"){
+                val distanceMiles = (element.distance?.value ?: 0) / 1609.344
+                val duration = element.duration?.text ?: ""
+                val trip = Trip(
+                    license = license,
+                    origin = origin,
+                    destination = destination,
+                    distance = distanceMiles,
+                    duration = duration,
+                    cost = 0.0,
+                    date = System.currentTimeMillis()
+                )
+                insertTrip(trip)
+                Result.success(Unit)
+            } else{
+                Result.failure(Exception("Could not calculate distance: ${element?.status}"))
+            }
+        } catch (e: Exception){
+            Result.failure(e)
+        }
+
+    }
     fun getTripsForCar(registration: String): Flow<List<Trip>>{
         return tripDao.getTripsByCar(registration)
+    }
+
+     fun getCurrentCarLicense() : Flow<String?> {
+        return carDao.getCurrentCarLicense()
     }
 
     suspend fun insertCar(car: Car){
