@@ -28,18 +28,34 @@ import com.example.fuelpricecalculator.ui.theme.FuelPriceCalculatorTheme
 import kotlin.collections.emptyList
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
+import com.google.android.libraries.places.api.Places
 
 class TripApplication : Application(){
     val database by lazy { AppDatabase.getDatabase(this) }
-    private val retrofit by lazy {
+    private val dvlaRetrofit by lazy {
         retrofit2.Retrofit.Builder()
             .baseUrl("https://driver-vehicle-licensing.api.gov.uk/")
             .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
             .build()
     }
-    private val dvlaApiService by lazy {retrofit.create(DvlaApiService::class.java)}
+
+    private val googleRetrofit by lazy{
+        retrofit2.Retrofit.Builder()
+            .baseUrl("https://maps.googleapis.com/")
+            .addConverterFactory(retrofit2.converter.gson.GsonConverterFactory.create())
+            .build()
+    }
+    private val dvlaApiService by lazy {dvlaRetrofit.create(DvlaApiService::class.java)}
+    private val googleApiService by lazy {googleRetrofit.create(DistanceMatrixAPI::class.java)}
     val repository by lazy { FuelRepository(database.tripDao(),
-                                            database.carDao(), dvlaApiService) }
+                                            database.carDao(), dvlaApiService, googleApiService) }
+
+    override fun onCreate() {
+        super.onCreate()
+        if(!Places.isInitialized()){
+            Places.initializeWithNewPlacesApiEnabled(applicationContext, "AIzaSyDOhBfgUByu7EzkbviohlK87YPOiGVYals")
+        }
+    }
 }
 
 class MainActivity : ComponentActivity() {
@@ -107,7 +123,7 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text(text = currentCar?.let { "${it.make ?: ""} ${it.colour} \u00B7 ${it.fuelType}" }
+                Text(text = currentCar?.let { "${it.make ?: ""} \u00B7 ${it.colour} \u00B7 ${it.fuelType}" }
                     ?: "No car details available", style = MaterialTheme.typography.bodyLarge)
             }
         }
@@ -183,7 +199,7 @@ fun TripItem(trip: Trip) {
         ) {
             Column {
                 Text(text = trip.destination, fontWeight = FontWeight.Medium)
-                Text(text = "${trip.distance} miles", style = MaterialTheme.typography.bodySmall)
+                Text(text = "${String.format("%.1f", trip.distance)} miles", style = MaterialTheme.typography.bodySmall)
             }
             Text(
                 text = "£${String.format("%.2f", trip.cost)}",
