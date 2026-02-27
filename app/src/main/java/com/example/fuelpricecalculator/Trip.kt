@@ -11,18 +11,20 @@ import androidx.room.ForeignKey
         ForeignKey(
             entity = Car::class,
             parentColumns = ["license"],
-            childColumns = ["carLicense"],
+            childColumns = ["license"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["carLicense"])]
+    indices = [Index(value = ["license"])]
 )
 
 data class Trip(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val carLicense: String,
+    val license: String,
+    val origin: String,
     val destination: String,
     val distance: Double,
+    val duration: String,
     val cost: Double,
     val date: Long
 )

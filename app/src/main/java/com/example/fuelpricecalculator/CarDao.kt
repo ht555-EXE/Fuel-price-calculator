@@ -13,6 +13,8 @@ interface CarDao {
     @Query("SELECT * FROM cars ORDER BY lastSelected DESC")
     fun getAllCars(): Flow<List<Car>>
 
+    @Query("SELECT license FROM cars ORDER BY lastSelected DESC LIMIT 1")
+    fun getCurrentCarLicense(): Flow<String?>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCar(car: Car)
 
