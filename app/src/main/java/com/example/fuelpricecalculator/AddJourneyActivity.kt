@@ -1,10 +1,15 @@
 package com.example.fuelpricecalculator
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,13 +22,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import com.example.fuelpricecalculator.ui.theme.FuelPriceCalculatorTheme
+import com.google.android.libraries.places.widget.PlaceAutocomplete
+import com.google.android.libraries.places.widget.PlaceAutocompleteActivity
 import kotlin.getValue
 
 class AddJourneyActivity : ComponentActivity() {
@@ -46,31 +57,106 @@ class AddJourneyActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
-    var journeyStart by remember { mutableStateOf("") }
-    var journeyEnd by remember { mutableStateOf("") }
+    var origin by remember { mutableStateOf("") }
+    var destination by remember { mutableStateOf("") }
+    var originPlaceId by remember { mutableStateOf<String?>(null) }
+    var destinationPlaceId by remember { mutableStateOf<String?>(null) }
+
+    // Observe current car license to ensure it's available and not null
+    val currentCarLicense by viewModel.currentCarLicense.observeAsState()
+
+    val context = LocalContext.current
+
+    val startLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == PlaceAutocompleteActivity.RESULT_OK && result.data != null) {
+            val prediction = PlaceAutocomplete.getPredictionFromIntent(result.data!!)
+            origin = prediction?.getFullText(null).toString()
+            originPlaceId = prediction?.placeId
+        }
+    }
+
+    val endLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == PlaceAutocompleteActivity.RESULT_OK && result.data != null) {
+            val prediction = PlaceAutocomplete.getPredictionFromIntent(result.data!!)
+            destination = prediction?.getFullText(null).toString()
+            destinationPlaceId = prediction?.placeId
+        }
+    }
+
+    val startInteractionSource = remember{ MutableInteractionSource() }
+    val endInteractionSource = remember{ MutableInteractionSource() }
+
+    LaunchedEffect(startInteractionSource){
+        startInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release){
+                val intent = PlaceAutocomplete.IntentBuilder().setCountries(listOf("UK")).build(context as Activity)
+                startLauncher.launch(intent)
+            }
+        }
+    }
+
+    LaunchedEffect(endInteractionSource){
+        endInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release){
+                val intent = PlaceAutocomplete.IntentBuilder().setCountries(listOf("UK")).build(context as Activity)
+                endLauncher.launch(intent)
+            }
+        }
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Add a New Journey") }) }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
+            if (currentCarLicense == null) {
+                Text(
+                    text = "No car selected. Please add/select a car first.",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Text("Journey Start", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
-                value = journeyStart,
-                onValueChange = {journeyStart = it},
+                value = origin,
+                onValueChange = {},
                 label = {Text("Journey Start")},
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                interactionSource = startInteractionSource
+
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             Text("Journey End", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
-                value = journeyEnd,
-                onValueChange = {journeyEnd = it},
+                value = destination,
+                onValueChange = {destination = it},
                 label = {Text("Journey End")},
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                interactionSource = endInteractionSource
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             Button(
-                onClick = {},
+                onClick = {
+                    val oId = originPlaceId
+                    val dId = destinationPlaceId
+                    if (oId != null && dId != null && currentCarLicense != null) {
+                        viewModel.addNewTrip(
+                            originPlaceId = oId,
+                            destinationPlaceId = dId,
+                            origin = origin,
+                            destination = destination
+                        )
+                        onBack()
+                    }
+                },
+                enabled = originPlaceId != null && destinationPlaceId != null && currentCarLicense != null,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             ) {Text("Add Journey")}
         }
