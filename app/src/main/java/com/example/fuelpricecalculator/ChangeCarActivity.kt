@@ -17,6 +17,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -50,11 +52,22 @@ fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel) {
     val context = LocalContext.current
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Change Vehicle") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Change Car") },
+                navigationIcon = {
+                    IconButton(onClick = onBack){
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
 
-            // Section 1: Add New Car
             Text("Add New Vehicle", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = regInput,
@@ -67,11 +80,10 @@ fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             ) { Text("Search & Add") }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // Section 2: List of Existing Cars (Database Contents)
             Text("Saved Vehicles", style = MaterialTheme.typography.titleMedium)
-
+            Spacer(modifier = Modifier.height(8.dp))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(cars) { car ->
                     Card(

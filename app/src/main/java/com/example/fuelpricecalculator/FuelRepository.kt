@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
 
-class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, private val dvlaApi: DvlaApiService, private val googleApi: DistanceMatrixAPI) {
+class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, private val dvlaApi: DvlaApiService, private val googleApi: DistanceMatrixAPI, val settingsManager: SettingsManager) {
     val allCars: Flow<List<Car>> = carDao.getAllCars()
     val allTrips: Flow<List<Trip>> = tripDao.getAllTrips()
 
@@ -19,6 +19,7 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
                     colour = data.colour,
                     make = data.make,
                     fuelType = when (data.fuelType.uppercase()) {
+                        //TODO: remove support for hybrids and electric
                         "PETROL" -> FuelType.PETROL
                         "DIESEL" -> FuelType.DIESEL
                         "ELECTRICITY" -> FuelType.ELECTRIC
@@ -43,6 +44,7 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
     }
     suspend fun calculateAndSaveTrip(license: String, apiKey: String, origin: String, destination: String, originPlaceId: String, destinationPlaceId:String) : Result<Unit>{
         return try {
+            val car = carDao.getCarByLicense(license).first()
             val response = googleApi.getDistance(
                 origins = "place_id:$originPlaceId",
                 destinations = "place_id:$destinationPlaceId",
@@ -52,13 +54,19 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
             if(element?.status == "OK"){
                 val distanceMiles = (element.distance?.value ?: 0) / 1609.344
                 val duration = element.duration?.text ?: ""
+                val cost = when (car?.fuelType){
+                    //TODO: Efficiencies in car and car license
+                    FuelType.PETROL -> (distanceMiles/car.efficiency) * (settingsManager.petrolPrice.first()/100 *4.54609)
+                    FuelType.DIESEL -> (distanceMiles/car.efficiency) * (settingsManager.dieselPrice.first()/100 *4.54609)
+                    else -> 0.0
+                }
                 val trip = Trip(
                     license = license,
                     origin = origin,
                     destination = destination,
                     distance = distanceMiles,
                     duration = duration,
-                    cost = 0.0,
+                    cost = cost,
                     date = System.currentTimeMillis()
                 )
                 insertTrip(trip)
@@ -95,12 +103,12 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
         carDao.updateCar(car)
     }
 
-    suspend fun clearAllTrips(){
-        tripDao.clearAll()
-    }
-
     suspend fun clearAllCars(){
         carDao.clearAll()
+    }
+
+    suspend fun deleteTrip(trip: Trip){
+        tripDao.deleteTrip(trip)
     }
 
     suspend fun updateSelectedCar(license: String) {

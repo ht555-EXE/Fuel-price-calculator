@@ -110,7 +110,7 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
             }
         }
     }
-
+    //TODO: make current car more efficient
     Scaffold(
         topBar = {
             TopAppBar(

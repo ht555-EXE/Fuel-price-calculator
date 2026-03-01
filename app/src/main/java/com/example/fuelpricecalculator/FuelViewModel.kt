@@ -7,11 +7,10 @@ import kotlinx.coroutines.launch
 class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
 
     val allCars: LiveData<List<Car>> = repository.allCars.asLiveData()
-    val allTrips: LiveData<List<Trip>> = repository.allTrips.asLiveData()
 
-    private val selectedCarLicense = MutableLiveData<String?>()
+    val currentCarLicense: LiveData<String?> = repository.getCurrentCarLicense().asLiveData()
 
-    val tripsForSelectedCar: LiveData<List<Trip>> = selectedCarLicense.switchMap { license ->
+    val tripsForCurrentCar: LiveData<List<Trip>> = currentCarLicense.switchMap { license ->
         if (license == null) {
             MutableLiveData(emptyList())
         } else {
@@ -30,8 +29,6 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
             }
         }
     }
-
-    val currentCarLicense: LiveData<String?> = repository.getCurrentCarLicense().asLiveData()
     
     fun addNewTrip(originPlaceId: String, destinationPlaceId: String, origin: String, destination: String){
         val license = currentCarLicense.value
@@ -41,6 +38,7 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
         }
 
         viewModelScope.launch {
+            //TODO: make api keys local and reroll
             val apiKey = "AIzaSyDOhBfgUByu7EzkbviohlK87YPOiGVYals"
             val result = repository.calculateAndSaveTrip(license, apiKey, origin, destination, originPlaceId, destinationPlaceId)
             if(result.isSuccess){
@@ -57,10 +55,6 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
         }
     }
 
-    fun insertCar(car: Car) = viewModelScope.launch {
-        repository.insertCar(car)
-    }
-
     fun insertTrip(trip: Trip) = viewModelScope.launch {
         repository.insertTrip(trip)
     }
@@ -69,12 +63,8 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
         repository.updateTrip(trip)
     }
 
-    fun updateCar(car: Car) = viewModelScope.launch {
-        repository.updateCar(car)
-    }
-
-    fun clearAllTrips() = viewModelScope.launch {
-        repository.clearAllTrips()
+    fun deleteTrip(trip: Trip) = viewModelScope.launch {
+        repository.deleteTrip(trip)
     }
 }
 
