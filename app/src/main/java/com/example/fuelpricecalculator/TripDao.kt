@@ -1,6 +1,7 @@
 package com.example.fuelpricecalculator
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -20,7 +21,6 @@ interface TripDao {
 
     @Update
     suspend fun updateTrip(trip: Trip)
-
-    @Query("DELETE FROM trips")
-    suspend fun clearAll()
+    @Delete
+    suspend fun deleteTrip(trip: Trip)
 }

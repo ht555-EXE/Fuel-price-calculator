@@ -11,5 +11,5 @@ data class Car (
     val make: String?,
     val fuelType: FuelType,
     val lastSelected: Long = System.currentTimeMillis(),
-    val efficiency: Double?
+    val efficiency: Double
 )

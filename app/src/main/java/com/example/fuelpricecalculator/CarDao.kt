@@ -26,4 +26,7 @@ interface CarDao {
 
     @Query("UPDATE cars SET lastSelected = :timeStamp WHERE license = :license")
     suspend fun updateTimeStamp(license: String, timeStamp: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM cars WHERE license = :license LIMIT 1")
+    fun getCarByLicense(license: String): Flow<Car?>
 }
