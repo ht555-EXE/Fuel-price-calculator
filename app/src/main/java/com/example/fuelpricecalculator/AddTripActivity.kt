@@ -13,9 +13,13 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -31,13 +35,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
 import com.example.fuelpricecalculator.ui.theme.FuelPriceCalculatorTheme
 import com.google.android.libraries.places.widget.PlaceAutocomplete
 import com.google.android.libraries.places.widget.PlaceAutocompleteActivity
 import kotlin.getValue
 
-class AddJourneyActivity : ComponentActivity() {
+class AddTripActivity : ComponentActivity() {
     private val viewModel: FuelViewModel by viewModels {
         val repository = (application as TripApplication).repository
         FuelViewModelFactory(repository)
@@ -109,7 +112,19 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Add a New Journey") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Add a Trip") },
+                navigationIcon = {
+                    IconButton(onClick = onBack){
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
             if (currentCarLicense == null) {
