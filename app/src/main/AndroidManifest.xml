@@ -26,7 +26,7 @@
         <activity android:name=".ChangeCarActivity"
             android:exported="false"
             android:label="Change Car" />
-        <activity android:name=".AddJourneyActivity"
+        <activity android:name=".AddTripActivity"
             android:exported="false"
             android:label="Add Journey" />
     </application>
