@@ -25,19 +25,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 
 class ChangeCarActivity : ComponentActivity() {
-    private val viewModel: FuelViewModel by viewModels {
+    private val fuelViewModel: FuelViewModel by viewModels {
         val repository = (application as TripApplication).repository
         FuelViewModelFactory(repository)
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
         setContent {
             FuelPriceCalculatorTheme {
-                ChangeCarScreen(onBack = {finish()}, viewModel = viewModel)
+                val snackbarHostState = remember { SnackbarHostState() }
+
+                LaunchedEffect(Unit) {
+                    fuelViewModel.uiEvent.collect { event ->
+                        if (event is FuelViewModel.UIEvent.ShowSnackBar) {
+                            snackbarHostState.showSnackbar(event.message)
+                        }
+                    }
+                }
+
+                ChangeCarScreen(
+                    onBack = { finish() },
+                    viewModel = fuelViewModel,
+                    snackbarHostState = snackbarHostState
+                )
             }
         }
     }
@@ -45,13 +60,14 @@ class ChangeCarActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel) {
+fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel, snackbarHostState: SnackbarHostState) {
     // Collect the list of cars from the database
     val cars by viewModel.allCars.observeAsState(initial = emptyList())
     var regInput by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Change Car") },
@@ -73,7 +89,8 @@ fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel) {
                 value = regInput,
                 onValueChange = { regInput = it.uppercase() },
                 label = { Text("Registration Number") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
             Button(
                 onClick = { viewModel.addNewCar(regInput) },

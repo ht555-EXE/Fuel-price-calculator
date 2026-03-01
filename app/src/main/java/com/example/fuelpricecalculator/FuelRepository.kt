@@ -2,29 +2,32 @@ package com.example.fuelpricecalculator
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 
 
 class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, private val dvlaApi: DvlaApiService, private val googleApi: DistanceMatrixAPI, val settingsManager: SettingsManager) {
     val allCars: Flow<List<Car>> = carDao.getAllCars()
-    val allTrips: Flow<List<Trip>> = tripDao.getAllTrips()
 
     suspend fun fetchAndSaveVehicle(registration: String, apiKey: String): Result<Unit> {
         return try {
+            val existingCar = carDao.getCarByLicense(registration).firstOrNull()
+            if (existingCar != null){
+                return Result.failure(Exception("Vehicle $registration is already saved"))
+            }
             val response = dvlaApi.getVehicleDetails(apiKey, VehicleRequest(registration))
-
             if (response.isSuccessful && response.body() != null) {
                 val data = response.body()!!
+                if(data.co2Emissions == 0){
+                    return Result.failure(Exception("Insufficient information on vehicle"))
+                }
                 val newCar = Car(
                     license = data.registrationNumber,
                     colour = data.colour,
                     make = data.make,
                     fuelType = when (data.fuelType.uppercase()) {
-                        //TODO: remove support for hybrids and electric
                         "PETROL" -> FuelType.PETROL
                         "DIESEL" -> FuelType.DIESEL
-                        "ELECTRICITY" -> FuelType.ELECTRIC
-                        "HYBRID ELECTRIC" -> FuelType.HYBRID
-                        else -> FuelType.UNKNOWN
+                        else -> return Result.failure(Exception("Sorry, only Petrol and Diesel vehicles are supported"))
                     },
                     efficiency = when (data.fuelType.uppercase()) {
                         "PETROL" -> 8887/ (data.co2Emissions * 1.60934)
@@ -36,7 +39,7 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
                 insertCar(newCar)
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Vehicle not found or API error"))
+                Result.failure(Exception("Vehicle not found"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -97,10 +100,6 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
 
     suspend fun updateTrip(trip: Trip){
         tripDao.updateTrip(trip)
-    }
-
-    suspend fun updateCar(car: Car){
-        carDao.updateCar(car)
     }
 
     suspend fun clearAllCars(){

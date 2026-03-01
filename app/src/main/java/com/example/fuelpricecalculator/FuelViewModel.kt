@@ -3,11 +3,12 @@ package com.example.fuelpricecalculator
 import android.util.Log
 import androidx.lifecycle.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 
 class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
 
     val allCars: LiveData<List<Car>> = repository.allCars.asLiveData()
-
     val currentCarLicense: LiveData<String?> = repository.getCurrentCarLicense().asLiveData()
 
     val tripsForCurrentCar: LiveData<List<Trip>> = currentCarLicense.switchMap { license ->
@@ -18,14 +19,21 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
         }
     }
 
+    private val _uiEvent = Channel<UIEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    sealed class UIEvent{
+        data class ShowSnackBar(val message: String) : UIEvent()
+    }
+
     fun addNewCar(license: String){
         viewModelScope.launch {
             val apiKey = "wIUdNp8fhYZfbcWT4YdU5rsCvIpJBtx7SHrbvhq1"
             val result = repository.fetchAndSaveVehicle(license, apiKey)
             if(result.isSuccess) {
-                Log.d("FuelViewModel", "Car added successfully: $license")
+                _uiEvent.send(UIEvent.ShowSnackBar("Car $license added"))
             } else{
-                Log.e("FuelViewModel", "Error adding car: ${result.exceptionOrNull()?.message}")
+                _uiEvent.send(UIEvent.ShowSnackBar(result.exceptionOrNull()?.message ?: "Unknown Error"))
             }
         }
     }
