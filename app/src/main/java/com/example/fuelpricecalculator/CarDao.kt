@@ -1,6 +1,7 @@
 package com.example.fuelpricecalculator
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -16,12 +17,12 @@ interface CarDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCar(car: Car)
 
-    @Query("DELETE FROM cars")
-    suspend fun clearAll()
+    @Delete
+    suspend fun deleteCar(car: Car)
 
     @Query("UPDATE cars SET lastSelected = :timeStamp WHERE license = :license")
     suspend fun updateTimeStamp(license: String, timeStamp: Long = System.currentTimeMillis())
 
     @Query("SELECT * FROM cars WHERE license = :license LIMIT 1")
-    fun getCarByLicense(license: String): Flow<Car?>
+    fun getCarByLicense(license: String?): Flow<Car?>
 }

@@ -20,7 +20,7 @@ import androidx.room.ForeignKey
 
 data class Trip(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val license: String,
+    val license: String?,
     val origin: String,
     val destination: String,
     val distance: Double,

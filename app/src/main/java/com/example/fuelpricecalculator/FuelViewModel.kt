@@ -10,6 +10,14 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
 
     val allCars: LiveData<List<Car>> = repository.allCars.asLiveData()
     val currentCarLicense: LiveData<String?> = repository.getCurrentCarLicense().asLiveData()
+    val petrolPrice: LiveData<Double> = repository.settingsManager.petrolPrice.asLiveData()
+    val dieselPrice: LiveData<Double> = repository.settingsManager.dieselPrice.asLiveData()
+    val lastUpdate: LiveData<String> = repository.settingsManager.lastUpdate.asLiveData()
+    val useMetric: LiveData<Boolean> = repository.settingsManager.useMetric.asLiveData()
+
+    fun toggleUnits(isMetric: Boolean) = viewModelScope.launch{
+        repository.settingsManager.saveUnitSystem(isMetric)
+    }
 
     val tripsForCurrentCar: LiveData<List<Trip>> = currentCarLicense.switchMap { license ->
         if (license == null) {
@@ -22,9 +30,7 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
     private val _uiEvent = Channel<UIEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
-    sealed class UIEvent{
-        data class ShowSnackBar(val message: String) : UIEvent()
-    }
+
 
     fun addNewCar(license: String){
         viewModelScope.launch {
@@ -39,20 +45,21 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
     }
     
     fun addNewTrip(originPlaceId: String, destinationPlaceId: String, origin: String, destination: String){
-        val license = currentCarLicense.value
-        if (license == null) {
-            Log.e("FuelViewModel", "Cannot add trip: No car license selected!")
-            return
-        }
+        //TODO: remove logging
+
 
         viewModelScope.launch {
+            val license = currentCarLicense.value
+            if (license == null) {
+                _uiEvent.send(UIEvent.ShowSnackBar("Cannot add trip: No car license selected"))
+            }
             //TODO: make api keys local and reroll
             val apiKey = "AIzaSyDOhBfgUByu7EzkbviohlK87YPOiGVYals"
             val result = repository.calculateAndSaveTrip(license, apiKey, origin, destination, originPlaceId, destinationPlaceId)
             if(result.isSuccess){
-                Log.d("FuelViewModel", "Trip added successfully for car: $license")
+                _uiEvent.send(UIEvent.ShowSnackBar("Trip added successfully for car: $license"))
             } else{
-                Log.e("FuelViewModel", "Error adding trip: ${result.exceptionOrNull()?.message}")
+                _uiEvent.send(UIEvent.ShowSnackBar("Error adding trip: ${result.exceptionOrNull()?.message}"))
             }
         }
     }
@@ -62,13 +69,8 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
             repository.updateSelectedCar(license)
         }
     }
-
-    fun insertTrip(trip: Trip) = viewModelScope.launch {
-        repository.insertTrip(trip)
-    }
-
-    fun updateTrip(trip: Trip) = viewModelScope.launch {
-        repository.updateTrip(trip)
+    fun deleteCar(car: Car) = viewModelScope.launch {
+        repository.deleteCar(car)
     }
 
     fun deleteTrip(trip: Trip) = viewModelScope.launch {

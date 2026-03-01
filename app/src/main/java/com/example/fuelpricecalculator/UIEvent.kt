@@ -1,4 +1,5 @@
 package com.example.fuelpricecalculator
 
-class UIEvent {
+open class UIEvent{
+    data class ShowSnackBar(val message: String) : UIEvent()
 }

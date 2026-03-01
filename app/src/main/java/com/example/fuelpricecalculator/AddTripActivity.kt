@@ -64,8 +64,6 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
     var destination by remember { mutableStateOf("") }
     var originPlaceId by remember { mutableStateOf<String?>(null) }
     var destinationPlaceId by remember { mutableStateOf<String?>(null) }
-
-    // Observe current car license to ensure it's available and not null
     val currentCarLicense by viewModel.currentCarLicense.observeAsState()
 
     val context = LocalContext.current

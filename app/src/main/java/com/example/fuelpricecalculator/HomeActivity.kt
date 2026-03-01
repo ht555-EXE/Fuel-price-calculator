@@ -3,7 +3,6 @@ package com.example.fuelpricecalculator
 import android.app.Application
 import android.content.Intent
 import androidx.compose.ui.graphics.Color
-import android.graphics.Paint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,16 +15,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -84,7 +78,7 @@ class TripApplication : Application(){
     }
 }
 
-class MainActivity : ComponentActivity() {
+class HomeActivity : ComponentActivity() {
     private val viewModel: FuelViewModel by viewModels {
         val repository = (application as TripApplication).repository
         FuelViewModelFactory(repository)
@@ -106,18 +100,20 @@ fun FuelPriceCalculatorApp(fuelViewModel: FuelViewModel) {
     //TODO: efficiencies in fuelViewModel
     val trips by fuelViewModel.tripsForCurrentCar.observeAsState(initial = emptyList())
     val cars by fuelViewModel.allCars.observeAsState(emptyList())
+    val isMetric by fuelViewModel.useMetric.observeAsState(initial = false)
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         HomeScreen(
             modifier = Modifier.padding(innerPadding),
             trips = trips,
             currentCar = cars.firstOrNull(),
-            fuelViewModel = fuelViewModel
+            fuelViewModel = fuelViewModel,
+            isMetric = isMetric
         )
     }
 }
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car?, fuelViewModel: FuelViewModel) {
+fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car?, fuelViewModel: FuelViewModel, isMetric: Boolean) {
     val context = LocalContext.current
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp),
@@ -133,7 +129,10 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier
             )
-            IconButton(onClick = {}){
+            IconButton(onClick = {
+                val intent = Intent(context, SettingsActivity::class.java)
+                context.startActivity(intent)
+            }){
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Settings",
@@ -248,8 +247,8 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
                             }
                         }
                     ) {
-                    TripItem(trip = trip)
-                        }
+                    TripItem(trip = trip, isMetric = isMetric)
+                    }
                 }
             }
         }
@@ -257,7 +256,7 @@ fun HomeScreen(modifier: Modifier = Modifier, trips: List<Trip>, currentCar: Car
 }
 
 @Composable
-fun TripItem(trip: Trip) {
+fun TripItem(trip: Trip, isMetric: Boolean) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -272,8 +271,15 @@ fun TripItem(trip: Trip) {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                // Now use the Boolean passed from the parent
+                val distanceText = if (!isMetric) {
+                    "${String.format("%.1f", trip.distance)} miles"
+                } else {
+                    "${String.format("%.1f", trip.distance * 1.609)} km"
+                }
+
                 Text(
-                    text = "${String.format("%.1f", trip.distance)} miles",
+                    text = "$distanceText \u00B7 ${trip.duration}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

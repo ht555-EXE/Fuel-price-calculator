@@ -17,6 +17,9 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
             val response = dvlaApi.getVehicleDetails(apiKey, VehicleRequest(registration))
             if (response.isSuccessful && response.body() != null) {
                 val data = response.body()!!
+                if(data.fuelType != "PETROL" && data.fuelType != "DIESEL"){
+                    return Result.failure(Exception("Sorry, only Petrol and Diesel vehicles are supported"))
+                }
                 if(data.co2Emissions == 0){
                     return Result.failure(Exception("Insufficient information on vehicle"))
                 }
@@ -24,12 +27,12 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
                     license = data.registrationNumber,
                     colour = data.colour,
                     make = data.make,
-                    fuelType = when (data.fuelType.uppercase()) {
+                    fuelType = when (data.fuelType) {
                         "PETROL" -> FuelType.PETROL
                         "DIESEL" -> FuelType.DIESEL
                         else -> return Result.failure(Exception("Sorry, only Petrol and Diesel vehicles are supported"))
                     },
-                    efficiency = when (data.fuelType.uppercase()) {
+                    efficiency = when (data.fuelType) {
                         "PETROL" -> 8887/ (data.co2Emissions * 1.60934)
                         "DIESEL" -> 10180/ (data.co2Emissions * 1.60934)
                         else -> 0.0
@@ -45,7 +48,7 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
             Result.failure(e)
         }
     }
-    suspend fun calculateAndSaveTrip(license: String, apiKey: String, origin: String, destination: String, originPlaceId: String, destinationPlaceId:String) : Result<Unit>{
+    suspend fun calculateAndSaveTrip(license: String?, apiKey: String, origin: String, destination: String, originPlaceId: String, destinationPlaceId: String) : Result<Unit>{
         return try {
             val car = carDao.getCarByLicense(license).first()
             val response = googleApi.getDistance(
@@ -102,8 +105,8 @@ class FuelRepository(private val tripDao: TripDao, private val carDao: CarDao, p
         tripDao.updateTrip(trip)
     }
 
-    suspend fun clearAllCars(){
-        carDao.clearAll()
+    suspend fun deleteCar(car: Car){
+        carDao.deleteCar(car)
     }
 
     suspend fun deleteTrip(trip: Trip){

@@ -22,8 +22,9 @@ class FuelPriceWorker(context: Context, params: WorkerParameters) : CoroutineWor
                 val response = Gson().fromJson(content, FuelResponse::class.java)
                 val petrol = response.stations.mapNotNull {it.prices["E10"]}.average()
                 val diesel = response.stations.mapNotNull {it.prices["B7"]}.average()
+                val lastUpdate = response.lastUpdated
                 val settings = (applicationContext as TripApplication).settingsManager
-                settings.savePrices(petrol.toFloat(), diesel.toFloat())
+                settings.savePrices(petrol, diesel, lastUpdate)
                 Result.success()
             } catch (e: Exception){
                 Result.retry()
