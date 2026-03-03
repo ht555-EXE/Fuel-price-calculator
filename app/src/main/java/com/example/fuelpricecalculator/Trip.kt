@@ -18,6 +18,18 @@ import androidx.room.ForeignKey
     indices = [Index(value = ["license"])]
 )
 
+/**
+ * Data class for Trip properties that are required for saving to the database
+ *
+ * @property id
+ * @property license
+ * @property origin
+ * @property destination
+ * @property distance
+ * @property duration
+ * @property cost
+ * @property date
+ */
 data class Trip(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val license: String?,

@@ -7,6 +7,10 @@ import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Dao for required Trip table queries by app.
+ *
+ */
 @Dao
 interface TripDao {
 

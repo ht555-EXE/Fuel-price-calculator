@@ -7,6 +7,10 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Dao for required Car table queries by app.
+ *
+ */
 @Dao
 interface CarDao {
     @Query("SELECT * FROM cars ORDER BY lastSelected DESC")
