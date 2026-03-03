@@ -31,12 +31,24 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Entry point for change car functionality.
+ *
+ * Initializes [FuelViewModel] through [FuelViewModelFactory],
+ * using [FuelRepository] from [TripApplication], rendering [ChangeCarScreen]
+ *
+ */
 class ChangeCarActivity : ComponentActivity() {
     private val fuelViewModel: FuelViewModel by viewModels {
         val repository = (application as TripApplication).repository
         FuelViewModelFactory(repository)
     }
 
+    /**
+     * Renders [ChangeCarScreen] and displays snack bars when observed from [fuelViewModel]
+     *
+     * @param savedInstanceState previous saved state of UI or null if this is a fresh start.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -44,6 +56,7 @@ class ChangeCarActivity : ComponentActivity() {
             FuelPriceCalculatorTheme {
                 val snackbarHostState = remember { SnackbarHostState() }
 
+                //observer for snackbar messages through view model
                 LaunchedEffect(Unit) {
                     fuelViewModel.uiEvent.collect { event ->
                         if (event is UIEvent.ShowSnackBar) {
@@ -51,7 +64,6 @@ class ChangeCarActivity : ComponentActivity() {
                         }
                     }
                 }
-
                 ChangeCarScreen(
                     onBack = { finish() },
                     viewModel = fuelViewModel,
@@ -62,13 +74,24 @@ class ChangeCarActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Function for displaying change car screen UI.
+ * Allows users to add a new vehicle based on a license plate,
+ * pulling information from [DvlaApiService] through [FuelViewModel].
+ * Allows users to select a vehicle they have previously added.
+ *
+ * @param onBack A callback invoked when the user exits the screen, via back button or after new
+ * trip is added
+ * @param viewModel view model instance passed for adding vehicles to persistent storage.
+ * @param snackbarHostState manages the display state of snackbar messages
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel, snackbarHostState: SnackbarHostState) {
+fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel,
+                    snackbarHostState: SnackbarHostState) {
     // Collect the list of cars from the database
     val cars by viewModel.allCars.observeAsState(initial = emptyList())
     var regInput by remember { mutableStateOf("") }
-    val context = LocalContext.current
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -87,7 +110,7 @@ fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel, snackbarHostSt
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
-
+            //field for adding a new car via license plate
             Text("Add New Vehicle", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = regInput,
@@ -97,14 +120,17 @@ fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel, snackbarHostSt
                 singleLine = true
             )
             Button(
-                onClick = { viewModel.addNewCar(regInput) },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                onClick = { viewModel.addNewCar(regInput){
+                          regInput = ""}},
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                enabled = regInput != ""
             ) { Text("Search & Add") }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
+            //saved vehicle section
             Text("Saved Vehicles", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
+            //message displayed for lack of any vehicles
             if (cars.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -116,9 +142,11 @@ fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel, snackbarHostSt
                     )
                 }
             } else {
+                //Lazy list for current vehicles
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(cars) { car ->
                         val currentCar by rememberUpdatedState(car)
+                        //logic for swipe to delete
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { value ->
                                 if (value == SwipeToDismissBoxValue.EndToStart) {
@@ -129,7 +157,6 @@ fun ChangeCarScreen(onBack: () -> Unit, viewModel: FuelViewModel, snackbarHostSt
                                 }
                             }
                         )
-
                         SwipeToDismissBox(
                             state = dismissState,
                             enableDismissFromStartToEnd = false,

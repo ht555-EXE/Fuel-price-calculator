@@ -40,11 +40,24 @@ import com.google.android.libraries.places.widget.PlaceAutocomplete
 import com.google.android.libraries.places.widget.PlaceAutocompleteActivity
 import kotlin.getValue
 
+/**
+ * Entry point for add trip functionality.
+ *
+ * Initializes [FuelViewModel] through [FuelViewModelFactory],
+ * using [FuelRepository] from [TripApplication], rendering [AddJourneyScreen]
+ *
+ */
 class AddTripActivity : ComponentActivity() {
     private val viewModel: FuelViewModel by viewModels {
         val repository = (application as TripApplication).repository
         FuelViewModelFactory(repository)
     }
+
+    /**
+     * Renders [AddJourneyScreen].
+     *
+     * @param savedInstanceState previous saved state of UI or null if this is a fresh start.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -57,8 +70,18 @@ class AddTripActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Function for displaying add journey screen UI.
+ * Displays boxes for adding origin and destination, adding this data through [FuelViewModel]
+ * upon user button press.
+ *
+ * @param onBack A callback invoked when the user exits the screen, via back button or after new
+ * trip is added
+ * @param viewModel view model instance passed for adding trip to persistent storage
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+
 fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
     var origin by remember { mutableStateOf("") }
     var destination by remember { mutableStateOf("") }
@@ -68,6 +91,7 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
 
     val context = LocalContext.current
 
+    //launcher for places activity for origin box
     val startLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -78,6 +102,7 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
         }
     }
 
+    //launcher for places activity for destination box
     val endLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -88,9 +113,11 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
         }
     }
 
+    //used for tracking interactions with origin and destination boxes
     val startInteractionSource = remember{ MutableInteractionSource() }
     val endInteractionSource = remember{ MutableInteractionSource() }
 
+    //Observes touch release events to activate google places autocomplete UI
     LaunchedEffect(startInteractionSource){
         startInteractionSource.interactions.collect { interaction ->
             if (interaction is PressInteraction.Release){
@@ -99,7 +126,6 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
             }
         }
     }
-
     LaunchedEffect(endInteractionSource){
         endInteractionSource.interactions.collect { interaction ->
             if (interaction is PressInteraction.Release){
@@ -108,7 +134,6 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
             }
         }
     }
-    //TODO: make current car more efficient
     Scaffold(
         topBar = {
             TopAppBar(
@@ -125,6 +150,7 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
+            //error message displayed for lack of a current car.
             if (currentCarLicense == null) {
                 Text(
                     text = "No car selected. Please add/select a car first.",
@@ -133,7 +159,7 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
-
+            //text boxes for origin and destination entry, opening google places when pressed
             Text("Journey Start", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = origin,
@@ -155,6 +181,7 @@ fun AddJourneyScreen(onBack: () -> Unit, viewModel: FuelViewModel){
                 interactionSource = endInteractionSource
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            //button adds trip to persistent storage through viewModel
             Button(
                 onClick = {
                     val oId = originPlaceId

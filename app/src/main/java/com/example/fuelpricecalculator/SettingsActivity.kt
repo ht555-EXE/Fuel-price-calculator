@@ -32,11 +32,24 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.fillMaxWidth
 
+/**
+ * Entry point for settings functionality.
+ *
+ * Initializes [FuelViewModel] through [FuelViewModelFactory],
+ * using [FuelRepository] from [TripApplication], rendering [SettingsScreen]
+ *
+ */
 class SettingsActivity : ComponentActivity (){
     private val viewModel: FuelViewModel by viewModels {
         val repository = (application as TripApplication).repository
         FuelViewModelFactory(repository)
     }
+
+    /**
+     * Renders [SettingsScreen].
+     *
+     * @param savedInstanceState previous saved state of UI or null if this is a fresh start.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -48,6 +61,15 @@ class SettingsActivity : ComponentActivity (){
     }
 }
 
+/**
+ * Function for displaying settings screen UI.
+ * Allows users to change settings and view most recent fuel prices,
+ * pulling information from [viewModel] via [PreferencesKey].
+ *
+ * @param onBack A callback invoked when the user exits the screen, via back button or after new
+ * trip is added
+ * @param viewModel view model instance passed for adding vehicles to persistent storage.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, viewModel: FuelViewModel) {
@@ -71,20 +93,34 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: FuelViewModel) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
-            Text(
-                text = "Current Petrol Price - ${String.format("%.1f", petrolPrice)}",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = "Current Diesel Price - ${String.format("%.1f", dieselPrice)}",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(text = "(last updated $lastUpdate)")
+            //text section for fuel prices
+            Column(
+                modifier = Modifier.padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Current Fuel Prices",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = "Current Petrol Price - ${String.format("%.1f", petrolPrice)}",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Current Diesel Price - ${String.format("%.1f", dieselPrice)}",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "(last updated $lastUpdate)",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             Column(
                 modifier = Modifier.padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                //settings toggle menus for settings
                 Text("Localization Settings", style = MaterialTheme.typography.titleLarge)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
