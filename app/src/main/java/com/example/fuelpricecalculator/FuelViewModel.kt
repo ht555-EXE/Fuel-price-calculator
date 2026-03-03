@@ -6,6 +6,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 
+/**
+ * FuelViewModel is responsible for managing UI state,
+ * used for bridging UI with [FuelRepository]
+ *
+ * @property repository the [FuelRepository] instance used by [FuelViewModel]
+ */
 class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
 
     val allCars: LiveData<List<Car>> = repository.allCars.asLiveData()
@@ -15,6 +21,11 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
     val lastUpdate: LiveData<String> = repository.settingsManager.lastUpdate.asLiveData()
     val useMetric: LiveData<Boolean> = repository.settingsManager.useMetric.asLiveData()
 
+    /**
+     * Method for toggling units within [SettingsManager].
+     *
+     * @param isMetric new measurement unit state, true for metric, false for imperial
+     */
     fun toggleUnits(isMetric: Boolean) = viewModelScope.launch{
         repository.settingsManager.saveUnitSystem(isMetric)
     }
@@ -27,27 +38,39 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
         }
     }
 
+    //instances for snack bar prompts
     private val _uiEvent = Channel<UIEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
-
-
-    fun addNewCar(license: String){
+    /**
+     * Triggers [DvlaApiService] lookup and saving to Car DB.
+     *
+     * @param license vehicle license.
+     * @param onSuccess callback executed if vehicle is added succcesfully
+     */
+    fun addNewCar(license: String, onSuccess: () -> Unit){
         viewModelScope.launch {
+            //TODO: make secret and reroll
             val apiKey = "wIUdNp8fhYZfbcWT4YdU5rsCvIpJBtx7SHrbvhq1"
             val result = repository.fetchAndSaveVehicle(license, apiKey)
             if(result.isSuccess) {
                 _uiEvent.send(UIEvent.ShowSnackBar("Car $license added"))
+                onSuccess()
             } else{
                 _uiEvent.send(UIEvent.ShowSnackBar(result.exceptionOrNull()?.message ?: "Unknown Error"))
             }
         }
     }
-    
+
+    /**
+     * Requests data from [DistanceMatrixAPI] then saves to Trip DB.
+     *
+     * @param originPlaceId google Places unique ID for origin location
+     * @param destinationPlaceId google Places unique ID for destination location
+     * @param origin human-readable starting address
+     * @param destination human-readable ending address
+     */
     fun addNewTrip(originPlaceId: String, destinationPlaceId: String, origin: String, destination: String){
-        //TODO: remove logging
-
-
         viewModelScope.launch {
             val license = currentCarLicense.value
             if (license == null) {
@@ -78,6 +101,11 @@ class FuelViewModel(private val repository: FuelRepository) : ViewModel() {
     }
 }
 
+/**
+ * Factory class to provide the [FuelRepository] dependency to the [FuelViewModel].
+ *
+ * @property repository the [FuelRepository] instance used by [FuelViewModel]
+ */
 class FuelViewModelFactory(private val repository: FuelRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(FuelViewModel::class.java)) {
